@@ -1,0 +1,45 @@
+{
+  "$comment": "Sample stdin payload used for previews and tests. rate_limits.*.resets_at are placeholders — scripts/preview.mjs rewrites them to live timestamps so countdowns look realistic.",
+  "cwd": "/home/user/my-project",
+  "session_id": "3f2b1c8a-0d4e-4a19-9f77-1e2d3c4b5a60",
+  "session_name": "statusline gallery",
+  "transcript_path": "/home/user/.claude/transcripts/3f2b1c8a.jsonl",
+  "version": "2.1.220",
+  "model": { "id": "claude-opus-5", "display_name": "Opus" },
+  "workspace": {
+    "current_dir": "/home/user/my-project",
+    "project_dir": "/home/user/my-project",
+    "added_dirs": [],
+    "repo": { "host": "github.com", "owner": "acme", "name": "my-project" }
+  },
+  "output_style": { "name": "default" },
+  "cost": {
+    "total_cost_usd": 0.4231,
+    "total_duration_ms": 742000,
+    "total_api_duration_ms": 96000,
+    "total_lines_added": 156,
+    "total_lines_removed": 23
+  },
+  "context_window": {
+    "total_input_tokens": 74800,
+    "total_output_tokens": 1200,
+    "context_window_size": 200000,
+    "used_percentage": 38,
+    "remaining_percentage": 62,
+    "current_usage": {
+      "input_tokens": 8500,
+      "output_tokens": 1200,
+      "cache_creation_input_tokens": 5000,
+      "cache_read_input_tokens": 61300
+    }
+  },
+  "exceeds_200k_tokens": false,
+  "fast_mode": false,
+  "effort": { "level": "high" },
+  "thinking": { "enabled": true },
+  "rate_limits": {
+    "five_hour": { "used_percentage": 23.5, "resets_at": 0 },
+    "seven_day": { "used_percentage": 41.2, "resets_at": 0 }
+  },
+  "pr": { "number": 1234, "url": "https://github.com/acme/my-project/pull/1234", "review_state": "pending" }
+}

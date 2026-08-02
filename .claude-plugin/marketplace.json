@@ -1,0 +1,21 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "cc-status-line-picker",
+  "description": "A gallery of ready-to-use status lines for Claude Code",
+  "owner": {
+    "name": "Priotts",
+    "url": "https://github.com/Priotts"
+  },
+  "plugins": [
+    {
+      "name": "cc-status-line-picker",
+      "source": "./",
+      "category": "productivity",
+      "tags": ["statusline", "theme", "git", "usage"],
+      "skills": [
+        "./skills/statusline-pick",
+        "./skills/statusline-preview"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "$comment": "Template copied to ~/.claude/statusline-picker/config.json on first install. Edit that copy, not this file. Every key is optional; anything omitted or invalid falls back to these defaults. Colors accept a name (\"cyan\"), a 256-color index (\"123\"), or a raw SGR sequence (\"38;5;123\").",
+  "colors": {
+    "accent": "cyan",
+    "ok": "green",
+    "warn": "yellow",
+    "danger": "red",
+    "muted": "gray"
+  },
+  "icons": {
+    "branch": "⎇",
+    "model": "◆",
+    "folder": "▸",
+    "context": "▤",
+    "cost": "$",
+    "clock": "◴",
+    "added": "+",
+    "removed": "-",
+    "staged": "●",
+    "modified": "○",
+    "untracked": "?",
+    "ahead": "↑",
+    "behind": "↓",
+    "pr": "⑂",
+    "worktree": "⧉",
+    "fast": "⚡"
+  },
+  "separator": " · ",
+  "barWidth": 10,
+  "barChars": {
+    "filled": "█",
+    "empty": "░"
+  },
+  "showModel": true,
+  "showGit": true,
+  "showCost": true,
+  "showLimits": true,
+  "thresholds": {
+    "warn": 70,
+    "danger": 90
+  }
+}

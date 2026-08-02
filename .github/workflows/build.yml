@@ -1,0 +1,46 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows is a first-class target: it is where path handling and the
+        # Git Bash / PowerShell split actually bite.
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify committed dist/ matches the sources
+        shell: bash
+        run: |
+          if [ -n "$(git status --porcelain dist config.default.json)" ]; then
+            echo "::error::dist/ or config.default.json is out of date. Run 'npm run build' and commit the result."
+            git --no-pager diff --stat dist config.default.json
+            exit 1
+          fi
+
+      - name: Test
+        run: npm test
+
+      - name: Preview renders
+        run: node scripts/preview.mjs

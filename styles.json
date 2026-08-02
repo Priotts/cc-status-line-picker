@@ -1,0 +1,83 @@
+{
+  "$comment": "Single source of truth for the gallery. Read by the skills, the installer, the test runner and the README. Adding a style means adding src/styles/<file>.ts, an entry here, and running `npm run build`.",
+  "categories": [
+    { "id": "minimal", "name": "Minimal", "description": "Essential information, small footprint" },
+    { "id": "git", "name": "Git", "description": "Branch, working tree state, worktrees and pull requests" },
+    { "id": "usage", "name": "Usage", "description": "Context window, tokens, session cost and rate limits" },
+    { "id": "fancy", "name": "Fancy", "description": "Colorful, icon-rich, optionally multi-line" }
+  ],
+  "styles": [
+    {
+      "id": "minimal/basic",
+      "category": "minimal",
+      "name": "Basic",
+      "description": "Model, directory, context usage and both rate-limit windows on one line.",
+      "file": "dist/styles/minimal-basic.mjs",
+      "lines": 1,
+      "requiresNerdFont": false
+    },
+    {
+      "id": "minimal/compact",
+      "category": "minimal",
+      "name": "Compact",
+      "description": "Directory and context percentage only. No colors, no icons.",
+      "file": "dist/styles/minimal-compact.mjs",
+      "lines": 1,
+      "requiresNerdFont": false
+    },
+    {
+      "id": "git/branch",
+      "category": "git",
+      "name": "Branch",
+      "description": "Directory and branch, with a single marker for uncommitted work.",
+      "file": "dist/styles/git-branch.mjs",
+      "lines": 1,
+      "requiresNerdFont": false
+    },
+    {
+      "id": "git/full",
+      "category": "git",
+      "name": "Full",
+      "description": "Branch, ahead/behind, staged/modified/untracked counts, worktree and open PR.",
+      "file": "dist/styles/git-full.mjs",
+      "lines": 1,
+      "requiresNerdFont": false
+    },
+    {
+      "id": "usage/tokens",
+      "category": "usage",
+      "name": "Tokens",
+      "description": "Context bar plus token counts, aware of 200k vs 1M context windows.",
+      "file": "dist/styles/usage-tokens.mjs",
+      "lines": 1,
+      "requiresNerdFont": false
+    },
+    {
+      "id": "usage/cost",
+      "category": "usage",
+      "name": "Cost tracker",
+      "description": "Session cost, duration, lines changed and rate limits with reset countdowns.",
+      "file": "dist/styles/usage-cost.mjs",
+      "lines": 1,
+      "requiresNerdFont": false
+    },
+    {
+      "id": "fancy/powerline",
+      "category": "fancy",
+      "name": "Powerline",
+      "description": "Filled segments joined by powerline arrows. Requires a Nerd Font.",
+      "file": "dist/styles/fancy-powerline.mjs",
+      "lines": 1,
+      "requiresNerdFont": true
+    },
+    {
+      "id": "fancy/multiline",
+      "category": "fancy",
+      "name": "Multiline",
+      "description": "Two lines: model, directory, git and PR above; context bar, cost and limits below.",
+      "file": "dist/styles/fancy-multiline.mjs",
+      "lines": 2,
+      "requiresNerdFont": false
+    }
+  ]
+}

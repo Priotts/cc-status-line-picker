@@ -1,0 +1,6 @@
+# Force LF everywhere, in the repository AND in the working tree.
+#
+# dist/ is committed build output and CI verifies it still matches the sources.
+# Without this, a Windows checkout would convert dist/ to CRLF while
+# `npm run build` writes LF, so the check would report a spurious diff.
+* text=auto eol=lf
