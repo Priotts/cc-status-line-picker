@@ -166,52 +166,11 @@ function pct(value) {
   if (typeof value !== "number" || !Number.isFinite(value)) return 0;
   return Math.max(0, Math.min(100, value));
 }
-function bar(percentage, width) {
-  const cfg = loadConfig();
-  const w = width ?? cfg.barWidth;
-  const filled = Math.max(0, Math.min(w, Math.round(pct(percentage) / 100 * w)));
-  return cfg.barChars.filled.repeat(filled) + cfg.barChars.empty.repeat(w - filled);
-}
 function basename(dir) {
   if (!dir) return "?";
   const cleaned = dir.replace(/[\\/]+$/, "");
   const parts = cleaned.split(/[\\/]/);
   return parts[parts.length - 1] || cleaned || "?";
-}
-function money(value) {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return "$0.00";
-  return `$${value.toFixed(2)}`;
-}
-function duration(ms) {
-  if (typeof ms !== "number" || !Number.isFinite(ms) || ms <= 0) return "0s";
-  const totalSeconds = Math.floor(ms / 1e3);
-  if (totalSeconds < 60) return `${totalSeconds}s`;
-  const minutes = Math.floor(totalSeconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  const rem = minutes % 60;
-  if (hours < 24) return rem > 0 ? `${hours}h${String(rem).padStart(2, "0")}m` : `${hours}h`;
-  const days = Math.floor(hours / 24);
-  return `${days}d${hours % 24}h`;
-}
-function resetsIn(epochSeconds) {
-  if (typeof epochSeconds !== "number" || !Number.isFinite(epochSeconds) || epochSeconds <= 0) {
-    return "";
-  }
-  const msLeft = epochSeconds * 1e3 - Date.now();
-  if (msLeft <= 0) return "now";
-  return duration(msLeft);
-}
-function resetsAtClock(epochSeconds) {
-  if (typeof epochSeconds !== "number" || !Number.isFinite(epochSeconds) || epochSeconds <= 0) {
-    return "";
-  }
-  const msLeft = epochSeconds * 1e3 - Date.now();
-  if (msLeft <= 0) return "";
-  const at = new Date(epochSeconds * 1e3);
-  const time = at.toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" });
-  if (msLeft < 24 * 60 * 60 * 1e3) return time;
-  return `${at.toLocaleDateString(void 0, { weekday: "short" })} ${time}`;
 }
 function join(parts, separator) {
   const sep = separator ?? loadConfig().separator;
@@ -380,54 +339,40 @@ function getGitInfo(cwd) {
 
 // src/lib/segments.ts
 var WINDOW_SECONDS = { "5h": 5 * 3600, "7d": 7 * 86400 };
-function limitSegment(label, window) {
+var MIN_ELAPSED_FRACTION = 0.2;
+function projectedUsage(used, resetsAt, windowSeconds) {
+  if (typeof resetsAt !== "number" || !Number.isFinite(resetsAt) || resetsAt <= 0) return null;
+  const secondsLeft = resetsAt - Date.now() / 1e3;
+  if (secondsLeft <= 0 || secondsLeft > windowSeconds) return null;
+  const elapsed = (windowSeconds - secondsLeft) / windowSeconds;
+  if (elapsed < MIN_ELAPSED_FRACTION) return null;
+  return used / elapsed;
+}
+function paceSegment(label, window) {
   if (typeof window?.used_percentage !== "number") return null;
-  const cfg = loadConfig();
   const used = pct(window.used_percentage);
-  const value = byThreshold(used, `${Math.round(used)}%`);
-  const left = resetsIn(window.resets_at);
-  const clock = cfg.showResetTime ? resetsAtClock(window.resets_at) : "";
-  const when = [left, clock].filter(Boolean).join(" \xB7 ");
-  return c.muted(`${label} `) + value + (when ? c.muted(` (${when})`) : "");
+  const head = c.muted(`${label} `) + byThreshold(used, `${Math.round(used)}%`);
+  const projected = projectedUsage(used, window.resets_at, WINDOW_SECONDS[label]);
+  if (projected === null) return head;
+  const tail = `\u2192${Math.round(projected)}%`;
+  return head + (projected > 100 ? c.danger(tail) : c.muted(tail));
 }
 
-// src/styles/fancy-multiline.ts
+// src/styles/usage-pace.ts
 run((input) => {
   const cfg = loadConfig();
   const cwd = input.workspace?.current_dir ?? input.cwd ?? null;
-  const top = [];
-  if (cfg.showModel && input.model?.display_name) {
-    const fast = input.fast_mode ? c.warn(` ${cfg.icons.fast}`) : "";
-    top.push(c.muted(`${cfg.icons.model} `) + input.model.display_name + fast);
-  }
-  top.push(c.accent(`${cfg.icons.folder} ${basename(cwd)}`));
+  const parts = [];
+  parts.push(c.accent(`${cfg.icons.folder} ${basename(cwd)}`));
   const git2 = cfg.showGit ? getGitInfo(cwd) : null;
   if (git2) {
-    top.push(`${c.muted(cfg.icons.branch)} ${c.ok(git2.branch)}`);
-    const changes = [];
-    if (git2.ahead > 0) changes.push(c.accent(`${cfg.icons.ahead}${git2.ahead}`));
-    if (git2.behind > 0) changes.push(c.warn(`${cfg.icons.behind}${git2.behind}`));
-    if (git2.staged > 0) changes.push(c.ok(`${cfg.icons.staged}${git2.staged}`));
-    if (git2.modified > 0) changes.push(c.warn(`${cfg.icons.modified}${git2.modified}`));
-    if (git2.untracked > 0) changes.push(c.muted(`${cfg.icons.untracked}${git2.untracked}`));
-    if (changes.length > 0) top.push(changes.join(" "));
+    parts.push(c.muted(`${cfg.icons.branch} ${git2.branch}`) + (git2.clean ? "" : c.warn("*")));
   }
-  const worktree = input.workspace?.git_worktree ?? input.worktree?.name;
-  if (worktree) top.push(c.muted(`${cfg.icons.worktree} ${worktree}`));
-  if (typeof input.pr?.number === "number") {
-    top.push(c.accent(`${cfg.icons.pr} #${input.pr.number}`));
-  }
-  const bottom = [];
   const ctx = pct(input.context_window?.used_percentage);
-  bottom.push(
-    `${c.muted(cfg.icons.context)} ${byThreshold(ctx, bar(ctx))} ${byThreshold(ctx, `${Math.round(ctx)}%`)}`
-  );
-  if (cfg.showCost && typeof input.cost?.total_cost_usd === "number") {
-    bottom.push(money(input.cost.total_cost_usd));
-  }
+  parts.push(c.muted("ctx ") + byThreshold(ctx, `${Math.round(ctx)}%`));
   if (cfg.showLimits) {
-    bottom.push(limitSegment("5h", input.rate_limits?.five_hour));
-    bottom.push(limitSegment("7d", input.rate_limits?.seven_day));
+    parts.push(paceSegment("5h", input.rate_limits?.five_hour));
+    parts.push(paceSegment("7d", input.rate_limits?.seven_day));
   }
-  printLines([join(top, " "), join(bottom)]);
+  printLines([join(parts)]);
 });

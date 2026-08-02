@@ -277,6 +277,7 @@ function run(render) {
 }
 
 // src/lib/segments.ts
+var WINDOW_SECONDS = { "5h": 5 * 3600, "7d": 7 * 86400 };
 function limitSegment(label, window) {
   if (typeof window?.used_percentage !== "number") return null;
   const cfg = loadConfig();

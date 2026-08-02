@@ -28,47 +28,11 @@ import {
   resetsAtClock,
   resetsIn,
 } from '../lib/format.js';
+import { projectedUsage, WINDOW_SECONDS, type WindowLabel } from '../lib/segments.js';
 import type { RateLimitWindow } from '../types.js';
 
 /** Wider than the other styles because the layout has the room for it. */
 const DASHBOARD_BAR_WIDTH = 14;
-
-/** Nominal length of each rate-limit window, used for the pace projection. */
-const WINDOW_SECONDS = { '5h': 5 * 3600, '7d': 7 * 86_400 } as const;
-
-/**
- * Below this fraction of the window elapsed, a projection is mostly noise:
- * dividing by a small elapsed fraction turns a short burst into an alarming
- * number. Nothing is shown until the window is a fifth of the way through.
- */
-const MIN_ELAPSED_FRACTION = 0.2;
-
-/**
- * Projects final usage from the current rate, with no history to keep.
- *
- * ASSUMES A FIXED WINDOW: one that starts, runs for its nominal length and
- * resets, so "elapsed" can be derived from `resets_at` alone. If these windows
- * turn out to slide instead, the elapsed fraction is meaningless and this must
- * go. Verifiable by watching `resets_at`: a fixed window holds steady for hours
- * and then jumps, a sliding one creeps continuously.
- *
- * Returns null whenever a projection would be unreliable.
- */
-function projectedUsage(
-  used: number,
-  resetsAt: number | null | undefined,
-  windowSeconds: number,
-): number | null {
-  if (typeof resetsAt !== 'number' || !Number.isFinite(resetsAt) || resetsAt <= 0) return null;
-
-  const secondsLeft = resetsAt - Date.now() / 1000;
-  if (secondsLeft <= 0 || secondsLeft > windowSeconds) return null;
-
-  const elapsed = (windowSeconds - secondsLeft) / windowSeconds;
-  if (elapsed < MIN_ELAPSED_FRACTION) return null;
-
-  return used / elapsed;
-}
 
 function barWidth(): number {
   const cfg = loadConfig();
@@ -82,7 +46,7 @@ function gauge(label: string, percentage: number): string {
   return `${c.muted(label.padStart(3))} ${byThreshold(percentage, fineBar(percentage, barWidth()))} ${byThreshold(percentage, value)}`;
 }
 
-function limitRow(label: '5h' | '7d', window: RateLimitWindow | null | undefined): string | null {
+function limitRow(label: WindowLabel, window: RateLimitWindow | null | undefined): string | null {
   if (typeof window?.used_percentage !== 'number') return null;
 
   const used = pct(window.used_percentage);

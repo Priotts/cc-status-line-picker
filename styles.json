@@ -62,6 +62,15 @@
       "requiresNerdFont": false
     },
     {
+      "id": "usage/pace",
+      "category": "usage",
+      "name": "Pace",
+      "description": "One line: directory, branch, context, and both rate-limit windows shown as where you are heading, not just where you are.",
+      "file": "dist/styles/usage-pace.mjs",
+      "lines": 1,
+      "requiresNerdFont": false
+    },
+    {
       "id": "fancy/powerline",
       "category": "fancy",
       "name": "Powerline",

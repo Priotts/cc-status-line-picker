@@ -391,8 +391,7 @@ function getGitInfo(cwd) {
   return info;
 }
 
-// src/styles/fancy-dashboard.ts
-var DASHBOARD_BAR_WIDTH = 14;
+// src/lib/segments.ts
 var WINDOW_SECONDS = { "5h": 5 * 3600, "7d": 7 * 86400 };
 var MIN_ELAPSED_FRACTION = 0.2;
 function projectedUsage(used, resetsAt, windowSeconds) {
@@ -403,6 +402,9 @@ function projectedUsage(used, resetsAt, windowSeconds) {
   if (elapsed < MIN_ELAPSED_FRACTION) return null;
   return used / elapsed;
 }
+
+// src/styles/fancy-dashboard.ts
+var DASHBOARD_BAR_WIDTH = 14;
 function barWidth() {
   const cfg = loadConfig();
   return cfg.barWidth === DEFAULT_CONFIG.barWidth ? DASHBOARD_BAR_WIDTH : cfg.barWidth;
