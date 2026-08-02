@@ -8,7 +8,9 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/test-styles.mjs"
+    "test": "node scripts/test-styles.mjs && node scripts/test-install.mjs",
+    "test:styles": "node scripts/test-styles.mjs",
+    "test:install": "node scripts/test-install.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
