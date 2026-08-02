@@ -4,7 +4,7 @@ A gallery of ready-to-use status lines for [Claude Code](https://code.claude.com
 with an interactive picker to switch between them.
 
 Claude Code supports exactly one `statusLine` entry in `settings.json`. This plugin
-doesn't change that — it ships eight ready-made styles and gives you a safe way to
+doesn't change that — it ships nine ready-made styles and gives you a safe way to
 activate any one of them, with backups and a one-command undo.
 
 ## Requirements
@@ -95,6 +95,34 @@ fancy/multiline   ◆ Opus ▸ my-project ⎇ main ●3 ○1 ⑂ #1234
 `multiline` splits identity and repository state onto the first line and
 consumption onto the second. Each line truncates independently, so a narrow
 terminal loses detail rather than wrapping.
+
+```
+fancy/dashboard   ◆ Opus ▸ my-project ⎇ main ●3 ○1 ?2
+                  ctx ███████████▊░░ 84%   169k/200k  $2.71 ◴ 1h48m +892 -310
+                   5h █████████▉░░░░ 71%   resets 21:28 (3h39m)  ▲ on pace for 266%
+                   7d ██████▏░░░░░░░ 44%   resets Fri 17:48 (4d23h)  ▲ on pace for 154%
+```
+
+`dashboard` puts the context window and both rate-limit windows on one scale,
+stacked, so you can see which will run out first. It is the only style using
+partial blocks (`▏▎▍▌▋▊▉`), which give eight times the resolution in the same
+width.
+
+The projection answers the question a raw percentage cannot: *am I going too
+fast?* It compares how much of the window you have consumed against how much of
+it has elapsed, and turns red when you are on course to exhaust it before it
+resets. So `88%` with fifteen minutes left reads `▸ on pace for 93%` — alarming
+number, fine situation — while `71%` with most of the window still ahead reads
+`▲ on pace for 266%`.
+
+Nothing is projected until a fifth of the window has elapsed; before that, a
+short burst would produce a frightening and meaningless number.
+
+> The projection assumes each rate-limit window is **fixed** — it starts, runs
+> for its nominal length, and resets — so that elapsed time can be derived from
+> `resets_at` alone. If these windows turn out to slide instead, the projection
+> is wrong and should be removed. See `projectedUsage` in
+> `src/styles/fancy-dashboard.ts`.
 
 ## Customizing
 

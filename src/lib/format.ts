@@ -18,6 +18,27 @@ export function bar(percentage: number, width?: number): string {
   return cfg.barChars.filled.repeat(filled) + cfg.barChars.empty.repeat(w - filled);
 }
 
+/** Left-to-right eighth blocks, for sub-character bar resolution. */
+const EIGHTHS = ['', '▏', '▎', '▍', '▌', '▋', '▊', '▉'];
+
+/**
+ * Progress bar with eight times the resolution of `bar`, in the same width:
+ * the last cell is drawn as a partial block instead of rounding to a whole one.
+ *
+ *   bar(38, 10)      ████░░░░░░
+ *   fineBar(38, 10)  ███▊░░░░░░
+ *
+ * Kept separate from `bar` on purpose — the existing styles are unchanged.
+ */
+export function fineBar(percentage: number, width?: number): string {
+  const cfg = loadConfig();
+  const w = width ?? cfg.barWidth;
+  const units = (pct(percentage) / 100) * w * 8;
+  const full = Math.min(w, Math.floor(units / 8));
+  const partial = full < w ? EIGHTHS[Math.floor(units % 8)] ?? '' : '';
+  return (cfg.barChars.filled.repeat(full) + partial).padEnd(w, cfg.barChars.empty);
+}
+
 /** Last path segment, handling both separators since Windows paths reach us as-is. */
 export function basename(dir: string | null | undefined): string {
   if (!dir) return '?';

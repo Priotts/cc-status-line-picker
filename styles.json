@@ -78,6 +78,15 @@
       "file": "dist/styles/fancy-multiline.mjs",
       "lines": 2,
       "requiresNerdFont": false
+    },
+    {
+      "id": "fancy/dashboard",
+      "category": "fancy",
+      "name": "Dashboard",
+      "description": "Four lines. Context and both rate-limit windows as aligned bars on one scale, so you can see which runs out first, plus a projection of where each window is heading.",
+      "file": "dist/styles/fancy-dashboard.mjs",
+      "lines": 4,
+      "requiresNerdFont": false
     }
   ]
 }
