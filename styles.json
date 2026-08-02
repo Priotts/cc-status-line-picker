@@ -1,10 +1,26 @@
 {
   "$comment": "Single source of truth for the gallery. Read by the skills, the installer, the test runner and the README. Adding a style means adding src/styles/<file>.ts, an entry here, and running `npm run build`.",
   "categories": [
-    { "id": "minimal", "name": "Minimal", "description": "Essential information, small footprint" },
-    { "id": "git", "name": "Git", "description": "Branch, working tree state, worktrees and pull requests" },
-    { "id": "usage", "name": "Usage", "description": "Context window, tokens, session cost and rate limits" },
-    { "id": "fancy", "name": "Fancy", "description": "Colorful, icon-rich, optionally multi-line" }
+    {
+      "id": "minimal",
+      "name": "Minimal",
+      "description": "Essential information, small footprint"
+    },
+    {
+      "id": "git",
+      "name": "Git",
+      "description": "Branch, working tree state, worktrees and pull requests"
+    },
+    {
+      "id": "usage",
+      "name": "Usage",
+      "description": "Context window, tokens, session cost and rate limits"
+    },
+    {
+      "id": "fancy",
+      "name": "Fancy",
+      "description": "Colorful, icon-rich, optionally multi-line"
+    }
   ],
   "styles": [
     {
@@ -74,9 +90,9 @@
       "id": "fancy/powerline",
       "category": "fancy",
       "name": "Powerline",
-      "description": "Filled segments joined by powerline arrows. Requires a Nerd Font.",
+      "description": "Two rows of filled segments joined by powerline arrows: session and cost above, context and rate-limit gauges below. Requires a Nerd Font.",
       "file": "dist/styles/fancy-powerline.mjs",
-      "lines": 1,
+      "lines": 2,
       "requiresNerdFont": true
     },
     {

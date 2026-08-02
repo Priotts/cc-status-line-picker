@@ -54,6 +54,12 @@ export interface Config {
   showLimits: boolean;
   /** Append the wall-clock reset time next to the countdown, e.g. `(4h11m · 18:30)`. */
   showResetTime: boolean;
+  /**
+   * Branch names treated as "the trunk". Anything else is a feature branch and
+   * `fancy/powerline` tints it differently. A list because the convention is
+   * not universal — trunk, develop and integration all exist in the wild.
+   */
+  defaultBranches: string[];
   thresholds: Thresholds;
 }
 
@@ -91,6 +97,7 @@ export const DEFAULT_CONFIG: Config = {
   showCost: true,
   showLimits: true,
   showResetTime: true,
+  defaultBranches: ['main', 'master'],
   thresholds: { warn: 70, danger: 90 },
 };
 
@@ -131,6 +138,11 @@ function merge(base: Config, override: Record<string, unknown>): Config {
         break;
       case 'separator':
         if (typeof value === 'string') out.separator = value;
+        break;
+      case 'defaultBranches':
+        if (Array.isArray(value) && value.every((v) => typeof v === 'string')) {
+          out.defaultBranches = value as string[];
+        }
         break;
       case 'barWidth':
         if (typeof value === 'number' && value > 0) out.barWidth = Math.min(40, Math.floor(value));

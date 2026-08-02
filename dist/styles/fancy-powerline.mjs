@@ -42,6 +42,7 @@ var DEFAULT_CONFIG = {
   showCost: true,
   showLimits: true,
   showResetTime: true,
+  defaultBranches: ["main", "master"],
   thresholds: { warn: 70, danger: 90 }
 };
 function isRecord(v) {
@@ -77,6 +78,11 @@ function merge(base, override) {
         break;
       case "separator":
         if (typeof value === "string") out.separator = value;
+        break;
+      case "defaultBranches":
+        if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
+          out.defaultBranches = value;
+        }
         break;
       case "barWidth":
         if (typeof value === "number" && value > 0) out.barWidth = Math.min(40, Math.floor(value));
@@ -126,25 +132,6 @@ var NAMED_FG = {
   brightCyan: "96",
   brightWhite: "97"
 };
-var NAMED_BG = {
-  black: "40",
-  red: "41",
-  green: "42",
-  yellow: "43",
-  blue: "44",
-  magenta: "45",
-  cyan: "46",
-  white: "47",
-  gray: "100",
-  grey: "100",
-  brightRed: "101",
-  brightGreen: "102",
-  brightYellow: "103",
-  brightBlue: "104",
-  brightMagenta: "105",
-  brightCyan: "106",
-  brightWhite: "107"
-};
 var colorEnabled = !process.env["NO_COLOR"];
 var CSI = "\x1B[";
 var RESET = colorEnabled ? `${CSI}0m` : "";
@@ -155,20 +142,9 @@ function fgCode(spec) {
   if (/^[\d;]+$/.test(spec)) return spec;
   return "39";
 }
-function bgCode(spec) {
-  const named = NAMED_BG[spec];
-  if (named) return named;
-  if (/^\d{1,3}$/.test(spec)) return `48;5;${spec}`;
-  if (/^[\d;]+$/.test(spec)) return spec;
-  return "49";
-}
 function fg(spec, text) {
   if (!colorEnabled || !text) return text;
   return `${CSI}${fgCode(spec)}m${text}${RESET}`;
-}
-function fgBg(fgSpec, bgSpec, text) {
-  if (!colorEnabled || !text) return text;
-  return `${CSI}${fgCode(fgSpec)};${bgCode(bgSpec)}m${text}${RESET}`;
 }
 var ANSI_RE = /\[[0-9;]*m/g;
 function visibleLength(text) {
@@ -188,6 +164,33 @@ function basename(dir) {
   const cleaned = dir.replace(/[\\/]+$/, "");
   const parts = cleaned.split(/[\\/]/);
   return parts[parts.length - 1] || cleaned || "?";
+}
+function money(value) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return "$0.00";
+  return `$${value.toFixed(2)}`;
+}
+function duration(ms) {
+  if (typeof ms !== "number" || !Number.isFinite(ms) || ms <= 0) return "0s";
+  const totalSeconds = Math.floor(ms / 1e3);
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  const minutes = Math.floor(totalSeconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const rem = minutes % 60;
+  if (hours < 24) return rem > 0 ? `${hours}h${String(rem).padStart(2, "0")}m` : `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d${hours % 24}h`;
+}
+function resetsAtClock(epochSeconds) {
+  if (typeof epochSeconds !== "number" || !Number.isFinite(epochSeconds) || epochSeconds <= 0) {
+    return "";
+  }
+  const msLeft = epochSeconds * 1e3 - Date.now();
+  if (msLeft <= 0) return "";
+  const at = new Date(epochSeconds * 1e3);
+  const time = at.toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" });
+  if (msLeft < 24 * 60 * 60 * 1e3) return time;
+  return `${at.toLocaleDateString(void 0, { weekday: "short" })} ${time}`;
 }
 function terminalWidth() {
   const raw = Number.parseInt(process.env["COLUMNS"] ?? "", 10);
@@ -350,53 +353,131 @@ function getGitInfo(cwd) {
   return info;
 }
 
+// src/lib/segments.ts
+var WINDOW_SECONDS = { "5h": 5 * 3600, "7d": 7 * 86400 };
+var MIN_ELAPSED_FRACTION = 0.2;
+function projectedUsage(used, resetsAt, windowSeconds) {
+  if (typeof resetsAt !== "number" || !Number.isFinite(resetsAt) || resetsAt <= 0) return null;
+  const secondsLeft = resetsAt - Date.now() / 1e3;
+  if (secondsLeft <= 0 || secondsLeft > windowSeconds) return null;
+  const elapsed = (windowSeconds - secondsLeft) / windowSeconds;
+  if (elapsed < MIN_ELAPSED_FRACTION) return null;
+  return used / elapsed;
+}
+
 // src/styles/fancy-powerline.ts
-var SEP = "\uE0B0";
+var SEP = String.fromCharCode(57520);
+var THIN_SEP = String.fromCharCode(57521);
 var PALETTE = {
   modelBg: "238",
   modelFg: "252",
   dirBg: "31",
   dirFg: "231",
-  gitBg: "236",
-  gitFg: "250",
-  ctxOkBg: "28",
-  ctxWarnBg: "136",
-  ctxDangerBg: "124",
-  ctxFg: "231"
+  /** Trunk: quiet. A feature branch gets the violet below so it stands out. */
+  trunkBg: "236",
+  trunkFg: "250",
+  featureBg: "54",
+  featureFg: "225",
+  costBg: "24",
+  costFg: "231",
+  gaugeOkBg: "28",
+  gaugeWarnBg: "136",
+  gaugeDangerBg: "124",
+  /** Within a gauge: the value, its label and clock, and the projection. */
+  value: "231",
+  label: "250",
+  paceOver: "210",
+  paceUnder: "194"
 };
+function simple(text, fgColor, bg) {
+  return { parts: [{ text, fg: fgColor }], bg };
+}
+function gaugeBg(percentage) {
+  const { thresholds } = loadConfig();
+  if (percentage >= thresholds.danger) return PALETTE.gaugeDangerBg;
+  if (percentage >= thresholds.warn) return PALETTE.gaugeWarnBg;
+  return PALETTE.gaugeOkBg;
+}
+var CSI2 = "\x1B[";
 function render(segments) {
+  if (!colorEnabled) {
+    return segments.map((seg) => seg.parts.map((part) => part.text).join("")).join(loadConfig().separator);
+  }
   let out = "";
   for (let i = 0; i < segments.length; i += 1) {
     const seg = segments[i];
     if (!seg) continue;
-    out += fgBg(seg.fg, seg.bg, ` ${seg.text} `);
+    const body = seg.parts.map((part, index) => {
+      const lead = index === 0 ? " " : "";
+      const trail = index === seg.parts.length - 1 ? " " : "";
+      return `${CSI2}38;5;${part.fg};48;5;${seg.bg}m${lead}${part.text}${trail}`;
+    }).join("");
+    out += `${body}${CSI2}0m`;
     const next = segments[i + 1];
-    out += next ? fgBg(seg.bg, next.bg, SEP) : fg(seg.bg, SEP);
+    if (!next) {
+      out += fg(seg.bg, SEP);
+    } else if (next.bg === seg.bg) {
+      out += `${CSI2}38;5;${seg.parts[0]?.fg ?? PALETTE.value};48;5;${seg.bg}m${THIN_SEP}${CSI2}0m`;
+    } else {
+      out += `${CSI2}38;5;${seg.bg};48;5;${next.bg}m${SEP}${CSI2}0m`;
+    }
   }
   return out;
+}
+function gauge(label, window) {
+  if (typeof window?.used_percentage !== "number") return null;
+  const cfg = loadConfig();
+  const used = pct(window.used_percentage);
+  const parts = [
+    { text: `${label} `, fg: PALETTE.label },
+    { text: `${Math.round(used)}%`, fg: PALETTE.value }
+  ];
+  if (label !== "ctx") {
+    const projected = projectedUsage(used, window.resets_at, WINDOW_SECONDS[label]);
+    if (projected !== null) {
+      parts.push({
+        text: ` \u2192 ${Math.round(projected)}%`,
+        fg: projected > 100 ? PALETTE.paceOver : PALETTE.paceUnder
+      });
+    }
+  }
+  if (cfg.showResetTime) {
+    const clock = resetsAtClock(window.resets_at);
+    if (clock) parts.push({ text: `  ${clock}`, fg: PALETTE.label });
+  }
+  return { parts, bg: gaugeBg(used) };
 }
 run((input) => {
   const cfg = loadConfig();
   const cwd = input.workspace?.current_dir ?? input.cwd ?? null;
-  const segments = [];
+  const top = [];
   if (cfg.showModel && input.model?.display_name) {
-    segments.push({
-      text: `${cfg.icons.model} ${input.model.display_name}`,
-      fg: PALETTE.modelFg,
-      bg: PALETTE.modelBg
-    });
+    const fast = input.fast_mode ? ` ${cfg.icons.fast}` : "";
+    top.push(
+      simple(`${cfg.icons.model} ${input.model.display_name}${fast}`, PALETTE.modelFg, PALETTE.modelBg)
+    );
   }
-  segments.push({ text: basename(cwd), fg: PALETTE.dirFg, bg: PALETTE.dirBg });
+  top.push(simple(basename(cwd), PALETTE.dirFg, PALETTE.dirBg));
   const git2 = cfg.showGit ? getGitInfo(cwd) : null;
   if (git2) {
-    segments.push({
-      text: `${cfg.icons.branch} ${git2.branch}${git2.clean ? "" : "*"}`,
-      fg: PALETTE.gitFg,
-      bg: PALETTE.gitBg
-    });
+    const onTrunk = cfg.defaultBranches.includes(git2.branch);
+    top.push(
+      simple(
+        `${cfg.icons.branch} ${git2.branch}${git2.clean ? "" : "*"}`,
+        onTrunk ? PALETTE.trunkFg : PALETTE.featureFg,
+        onTrunk ? PALETTE.trunkBg : PALETTE.featureBg
+      )
+    );
   }
-  const ctx = pct(input.context_window?.used_percentage);
-  const ctxBg = ctx >= cfg.thresholds.danger ? PALETTE.ctxDangerBg : ctx >= cfg.thresholds.warn ? PALETTE.ctxWarnBg : PALETTE.ctxOkBg;
-  segments.push({ text: `${Math.round(ctx)}%`, fg: PALETTE.ctxFg, bg: ctxBg });
-  printLines([render(segments)]);
+  if (cfg.showCost && typeof input.cost?.total_cost_usd === "number") {
+    const elapsed = input.cost.total_duration_ms ? ` ${cfg.icons.clock} ${duration(input.cost.total_duration_ms)}` : "";
+    top.push(simple(`${money(input.cost.total_cost_usd)}${elapsed}`, PALETTE.costFg, PALETTE.costBg));
+  }
+  const bottom = [
+    gauge("ctx", { used_percentage: input.context_window?.used_percentage }),
+    cfg.showLimits ? gauge("5h", input.rate_limits?.five_hour) : null,
+    cfg.showLimits ? gauge("7d", input.rate_limits?.seven_day) : null
+  ].filter((s) => s !== null);
+  const rows = [top, bottom].filter((row) => row.length > 0).map(render);
+  printLines(rows);
 });

@@ -42,6 +42,7 @@ var DEFAULT_CONFIG = {
   showCost: true,
   showLimits: true,
   showResetTime: true,
+  defaultBranches: ["main", "master"],
   thresholds: { warn: 70, danger: 90 }
 };
 function isRecord(v) {
@@ -77,6 +78,11 @@ function merge(base, override) {
         break;
       case "separator":
         if (typeof value === "string") out.separator = value;
+        break;
+      case "defaultBranches":
+        if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
+          out.defaultBranches = value;
+        }
         break;
       case "barWidth":
         if (typeof value === "number" && value > 0) out.barWidth = Math.min(40, Math.floor(value));
