@@ -71,6 +71,27 @@ export function resetsIn(epochSeconds: number | null | undefined): string {
   return duration(msLeft);
 }
 
+/**
+ * Wall-clock time a rate-limit window resets at, e.g. `18:30`.
+ *
+ * Complements `resetsIn`: the countdown says how long is left, this says when.
+ * Formatted with the system locale, so 24h/12h follows the user's settings.
+ * Past 24 hours the weekday is prepended — a bare `18:30` two days out would be
+ * ambiguous. Returns an empty string when unknown or already elapsed.
+ */
+export function resetsAtClock(epochSeconds: number | null | undefined): string {
+  if (typeof epochSeconds !== 'number' || !Number.isFinite(epochSeconds) || epochSeconds <= 0) {
+    return '';
+  }
+  const msLeft = epochSeconds * 1000 - Date.now();
+  if (msLeft <= 0) return '';
+
+  const at = new Date(epochSeconds * 1000);
+  const time = at.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  if (msLeft < 24 * 60 * 60 * 1000) return time;
+  return `${at.toLocaleDateString(undefined, { weekday: 'short' })} ${time}`;
+}
+
 /** Drops empty/undefined parts before joining, so a missing section leaves no dangling separator. */
 export function join(parts: Array<string | null | undefined>, separator?: string): string {
   const sep = separator ?? loadConfig().separator;

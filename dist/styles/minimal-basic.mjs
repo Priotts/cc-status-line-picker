@@ -41,6 +41,7 @@ var DEFAULT_CONFIG = {
   showGit: true,
   showCost: true,
   showLimits: true,
+  showResetTime: true,
   thresholds: { warn: 70, danger: 90 }
 };
 function isRecord(v) {
@@ -84,6 +85,7 @@ function merge(base, override) {
       case "showGit":
       case "showCost":
       case "showLimits":
+      case "showResetTime":
         if (typeof value === "boolean") out[key] = value;
         break;
     }

@@ -35,6 +35,7 @@
   "showGit": true,
   "showCost": true,
   "showLimits": true,
+  "showResetTime": true,
   "thresholds": {
     "warn": 70,
     "danger": 90

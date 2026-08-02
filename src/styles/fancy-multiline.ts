@@ -12,15 +12,8 @@ import { run } from '../lib/input.js';
 import { loadConfig } from '../lib/config.js';
 import { c, byThreshold } from '../lib/ansi.js';
 import { getGitInfo } from '../lib/git.js';
-import { bar, basename, join, money, pct, printLines, resetsIn } from '../lib/format.js';
-import type { RateLimitWindow } from '../types.js';
-
-function limitSegment(label: string, window: RateLimitWindow | null | undefined): string | null {
-  if (typeof window?.used_percentage !== 'number') return null;
-  const p = pct(window.used_percentage);
-  const left = resetsIn(window.resets_at);
-  return c.muted(`${label} `) + byThreshold(p, `${Math.round(p)}%`) + (left ? c.muted(` (${left})`) : '');
-}
+import { bar, basename, join, money, pct, printLines } from '../lib/format.js';
+import { limitSegment } from '../lib/segments.js';
 
 run((input) => {
   const cfg = loadConfig();

@@ -6,17 +6,9 @@
  */
 import { run } from '../lib/input.js';
 import { loadConfig } from '../lib/config.js';
-import { c, byThreshold } from '../lib/ansi.js';
-import { duration, join, money, pct, printLines, resetsIn } from '../lib/format.js';
-import type { RateLimitWindow } from '../types.js';
-
-function limitSegment(label: string, window: RateLimitWindow | null | undefined): string | null {
-  if (typeof window?.used_percentage !== 'number') return null;
-  const p = pct(window.used_percentage);
-  const left = resetsIn(window.resets_at);
-  const value = byThreshold(p, `${Math.round(p)}%`);
-  return c.muted(`${label} `) + value + (left ? c.muted(` (${left})`) : '');
-}
+import { c } from '../lib/ansi.js';
+import { duration, join, money, printLines } from '../lib/format.js';
+import { limitSegment } from '../lib/segments.js';
 
 run((input) => {
   const cfg = loadConfig();

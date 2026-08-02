@@ -41,6 +41,7 @@ var DEFAULT_CONFIG = {
   showGit: true,
   showCost: true,
   showLimits: true,
+  showResetTime: true,
   thresholds: { warn: 70, danger: 90 }
 };
 function isRecord(v) {
@@ -84,6 +85,7 @@ function merge(base, override) {
       case "showGit":
       case "showCost":
       case "showLimits":
+      case "showResetTime":
         if (typeof value === "boolean") out[key] = value;
         break;
     }
@@ -199,6 +201,17 @@ function resetsIn(epochSeconds) {
   const msLeft = epochSeconds * 1e3 - Date.now();
   if (msLeft <= 0) return "now";
   return duration(msLeft);
+}
+function resetsAtClock(epochSeconds) {
+  if (typeof epochSeconds !== "number" || !Number.isFinite(epochSeconds) || epochSeconds <= 0) {
+    return "";
+  }
+  const msLeft = epochSeconds * 1e3 - Date.now();
+  if (msLeft <= 0) return "";
+  const at = new Date(epochSeconds * 1e3);
+  const time = at.toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" });
+  if (msLeft < 24 * 60 * 60 * 1e3) return time;
+  return `${at.toLocaleDateString(void 0, { weekday: "short" })} ${time}`;
 }
 function join(parts, separator) {
   const sep = separator ?? loadConfig().separator;
@@ -365,13 +378,19 @@ function getGitInfo(cwd) {
   return info;
 }
 
-// src/styles/fancy-multiline.ts
+// src/lib/segments.ts
 function limitSegment(label, window) {
   if (typeof window?.used_percentage !== "number") return null;
-  const p = pct(window.used_percentage);
+  const cfg = loadConfig();
+  const used = pct(window.used_percentage);
+  const value = byThreshold(used, `${Math.round(used)}%`);
   const left = resetsIn(window.resets_at);
-  return c.muted(`${label} `) + byThreshold(p, `${Math.round(p)}%`) + (left ? c.muted(` (${left})`) : "");
+  const clock = cfg.showResetTime ? resetsAtClock(window.resets_at) : "";
+  const when = [left, clock].filter(Boolean).join(" \xB7 ");
+  return c.muted(`${label} `) + value + (when ? c.muted(` (${when})`) : "");
 }
+
+// src/styles/fancy-multiline.ts
 run((input) => {
   const cfg = loadConfig();
   const cwd = input.workspace?.current_dir ?? input.cwd ?? null;

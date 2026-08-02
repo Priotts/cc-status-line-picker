@@ -52,6 +52,8 @@ export interface Config {
   showGit: boolean;
   showCost: boolean;
   showLimits: boolean;
+  /** Append the wall-clock reset time next to the countdown, e.g. `(4h11m · 18:30)`. */
+  showResetTime: boolean;
   thresholds: Thresholds;
 }
 
@@ -88,6 +90,7 @@ export const DEFAULT_CONFIG: Config = {
   showGit: true,
   showCost: true,
   showLimits: true,
+  showResetTime: true,
   thresholds: { warn: 70, danger: 90 },
 };
 
@@ -136,6 +139,7 @@ function merge(base: Config, override: Record<string, unknown>): Config {
       case 'showGit':
       case 'showCost':
       case 'showLimits':
+      case 'showResetTime':
         if (typeof value === 'boolean') out[key] = value;
         break;
     }
