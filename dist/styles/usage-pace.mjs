@@ -172,6 +172,17 @@ function basename(dir) {
   const parts = cleaned.split(/[\\/]/);
   return parts[parts.length - 1] || cleaned || "?";
 }
+function resetsAtClock(epochSeconds) {
+  if (typeof epochSeconds !== "number" || !Number.isFinite(epochSeconds) || epochSeconds <= 0) {
+    return "";
+  }
+  const msLeft = epochSeconds * 1e3 - Date.now();
+  if (msLeft <= 0) return "";
+  const at = new Date(epochSeconds * 1e3);
+  const time = at.toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" });
+  if (msLeft < 24 * 60 * 60 * 1e3) return time;
+  return `${at.toLocaleDateString(void 0, { weekday: "short" })} ${time}`;
+}
 function join(parts, separator) {
   const sep = separator ?? loadConfig().separator;
   return parts.filter((p) => typeof p === "string" && p.length > 0).join(sep);
@@ -351,11 +362,17 @@ function projectedUsage(used, resetsAt, windowSeconds) {
 function paceSegment(label, window) {
   if (typeof window?.used_percentage !== "number") return null;
   const used = pct(window.used_percentage);
-  const head = c.muted(`${label} `) + byThreshold(used, `${Math.round(used)}%`);
+  let out = c.muted(`${label} `) + byThreshold(used, `${Math.round(used)}%`);
   const projected = projectedUsage(used, window.resets_at, WINDOW_SECONDS[label]);
-  if (projected === null) return head;
-  const tail = `\u2192${Math.round(projected)}%`;
-  return head + (projected > 100 ? c.danger(tail) : c.muted(tail));
+  if (projected !== null) {
+    const arrow = `\u2192${Math.round(projected)}%`;
+    out += projected > 100 ? c.danger(arrow) : c.muted(arrow);
+  }
+  if (loadConfig().showResetTime) {
+    const clock = resetsAtClock(window.resets_at);
+    if (clock) out += c.muted(` (${clock})`);
+  }
+  return out;
 }
 
 // src/styles/usage-pace.ts
@@ -363,6 +380,11 @@ run((input) => {
   const cfg = loadConfig();
   const cwd = input.workspace?.current_dir ?? input.cwd ?? null;
   const parts = [];
+  if (cfg.showModel && input.model?.display_name) {
+    const effort = input.effort?.level ? c.muted(` ${input.effort.level}`) : "";
+    const fast = input.fast_mode ? c.warn(` ${cfg.icons.fast}`) : "";
+    parts.push(c.muted(`${cfg.icons.model} `) + input.model.display_name + effort + fast);
+  }
   parts.push(c.accent(`${cfg.icons.folder} ${basename(cwd)}`));
   const git2 = cfg.showGit ? getGitInfo(cwd) : null;
   if (git2) {

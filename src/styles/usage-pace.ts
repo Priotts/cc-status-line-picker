@@ -1,8 +1,8 @@
 /**
  * usage/pace — one line: where you are, and where you are heading.
  *
- *   ▸ my-project · ⎇ main · ctx 38% · 5h 24% · 7d 41%→60%
- *   ▸ my-project · ⎇ main* · ctx 84% · 5h 71%→266% · 7d 44%→154%
+ *   ◆ Opus high · ▸ my-project · ⎇ main · ctx 38% · 5h 24% (01:31) · 7d 41%→60% (Wed 03:19)
+ *   ◆ Opus max ⚡ · ▸ my-project · ⎇ main* · ctx 84% · 5h 71%→266% (21:28) · 7d 44%→154% (Fri 20:05)
  *
  * The same projection `fancy/dashboard` shows, without the bars. The bars are
  * what cost space; the projection is what carries information nothing else
@@ -24,6 +24,14 @@ run((input) => {
   const cfg = loadConfig();
   const cwd = input.workspace?.current_dir ?? input.cwd ?? null;
   const parts: Array<string | null> = [];
+
+  // Model, reasoning effort and fast mode read as one thing — "what am I
+  // talking to" — so they share a segment rather than three.
+  if (cfg.showModel && input.model?.display_name) {
+    const effort = input.effort?.level ? c.muted(` ${input.effort.level}`) : '';
+    const fast = input.fast_mode ? c.warn(` ${cfg.icons.fast}`) : '';
+    parts.push(c.muted(`${cfg.icons.model} `) + input.model.display_name + effort + fast);
+  }
 
   parts.push(c.accent(`${cfg.icons.folder} ${basename(cwd)}`));
 

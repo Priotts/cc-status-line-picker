@@ -81,6 +81,10 @@ export function limitSegment(
  *
  * When there is not yet enough elapsed window to project, the arrow is simply
  * absent and the segment gets shorter on its own.
+ *
+ * The wall-clock reset time follows in parentheses, unless `showResetTime` is
+ * off. The projection says where you are heading; the clock says when the slate
+ * is wiped. Both matter and neither implies the other.
  */
 export function paceSegment(
   label: WindowLabel,
@@ -89,11 +93,18 @@ export function paceSegment(
   if (typeof window?.used_percentage !== 'number') return null;
 
   const used = pct(window.used_percentage);
-  const head = c.muted(`${label} `) + byThreshold(used, `${Math.round(used)}%`);
+  let out = c.muted(`${label} `) + byThreshold(used, `${Math.round(used)}%`);
 
   const projected = projectedUsage(used, window.resets_at, WINDOW_SECONDS[label]);
-  if (projected === null) return head;
+  if (projected !== null) {
+    const arrow = `→${Math.round(projected)}%`;
+    out += projected > 100 ? c.danger(arrow) : c.muted(arrow);
+  }
 
-  const tail = `→${Math.round(projected)}%`;
-  return head + (projected > 100 ? c.danger(tail) : c.muted(tail));
+  if (loadConfig().showResetTime) {
+    const clock = resetsAtClock(window.resets_at);
+    if (clock) out += c.muted(` (${clock})`);
+  }
+
+  return out;
 }
