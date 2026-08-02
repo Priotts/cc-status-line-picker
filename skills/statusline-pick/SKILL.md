@@ -32,11 +32,33 @@ packaging bug rather than trying to build it yourself.
 If the user already named a style (`git/full`) or was specific enough to make the
 choice obvious ("I want git info and my spend"), skip straight to Step 3.
 
-Otherwise use **AskUserQuestion**. Put the rendered `output` of each candidate in
-the option's `preview` field — seeing the actual bar is what makes the choice
-easy. Ask about the category first when the user has given you nothing to go on,
-then the variant; ask in a single question when their request already narrows it
-to one category.
+Otherwise use **AskUserQuestion** in exactly two steps. `AskUserQuestion` caps a
+question at four options and there are eight styles, so asking about styles
+directly would silently hide half the gallery — the user would never learn the
+other four exist.
+
+**Step 2a — the four categories.** One option per category, never a subset:
+
+| Option | Covers |
+|---|---|
+| `minimal` | `minimal/basic`, `minimal/compact` |
+| `git` | `git/branch`, `git/full` |
+| `usage` | `usage/tokens`, `usage/cost` |
+| `fancy` | `fancy/powerline`, `fancy/multiline` |
+
+Put **both** of that category's rendered outputs in the option's `preview` field,
+labelled by variant, so the user sees everything the category offers before
+committing to it.
+
+**Step 2b — the two variants** of the chosen category, with each style's rendered
+`output` as its `preview`.
+
+Skip 2a only when the user's request already narrows things to one category; go
+straight to 2b in that case.
+
+Strip the ANSI escape sequences out of `output` before putting it in a `preview`
+field — previews render as plain monospace text, so the raw codes would show as
+visible garbage.
 
 Note which styles have `requiresNerdFont: true` — mention the font requirement in
 that option's description so nobody picks a style that renders as boxes.

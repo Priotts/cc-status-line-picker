@@ -2,7 +2,7 @@
   "name": "cc-status-line-picker",
   "displayName": "Status Line Picker",
   "description": "A gallery of ready-to-use status lines for Claude Code: pick a style across the minimal, git, usage and fancy categories and activate it with one command.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": {
     "name": "Priotts",
     "url": "https://github.com/Priotts"
