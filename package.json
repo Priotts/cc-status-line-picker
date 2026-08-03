@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node scripts/test-styles.mjs && node scripts/test-install.mjs",
     "test:styles": "node scripts/test-styles.mjs",
-    "test:install": "node scripts/test-install.mjs"
+    "test:install": "node scripts/test-install.mjs",
+    "svg": "node scripts/build-svg.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",

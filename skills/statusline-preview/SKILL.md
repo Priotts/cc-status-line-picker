@@ -24,8 +24,9 @@ Output is grouped by category, with each style's id above its rendered line.
 node "${CLAUDE_PLUGIN_ROOT}/scripts/preview.mjs" git/full usage/cost
 ```
 
-Valid ids: `minimal/basic`, `minimal/compact`, `git/branch`, `git/full`,
-`usage/tokens`, `usage/cost`, `fancy/powerline`, `fancy/multiline`.
+An unknown id makes the script exit 1 and print every valid one, so you never have
+to guess. Deliberately not listed here: a hardcoded list goes stale the moment a
+style is added, and this file has no way of knowing.
 
 ## Notes when reporting the result
 
@@ -33,5 +34,6 @@ Valid ids: `minimal/basic`, `minimal/compact`, `git/branch`, `git/full`,
   colors and alignment survive.
 - The sample data is fixed (model, cost, token counts) but the working directory
   and git state are real, so branch and file counts reflect the current repo.
-- `fancy/powerline` needs a Nerd Font. Its separators show as boxes otherwise —
-  say so if the user is looking at that one.
+- Some styles print more than one line. Keep them together in the same block.
+- Any style whose entry has `requiresNerdFont` needs a patched font; its separators
+  are empty boxes without one. Say so if the user is looking at that one.

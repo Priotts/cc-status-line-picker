@@ -32,26 +32,24 @@ packaging bug rather than trying to build it yourself.
 If the user already named a style (`git/full`) or was specific enough to make the
 choice obvious ("I want git info and my spend"), skip straight to Step 3.
 
-Otherwise use **AskUserQuestion** in exactly two steps. `AskUserQuestion` caps a
-question at four options and there are eight styles, so asking about styles
-directly would silently hide half the gallery — the user would never learn the
-other four exist.
+Otherwise use **AskUserQuestion** in exactly two steps. A question caps at four
+options and there are more styles than that, so asking about styles directly
+would silently hide part of the gallery and the user would never learn the rest
+exists.
 
-**Step 2a — the four categories.** One option per category, never a subset:
+**Step 2a — the categories.** Build the options from the `category` field of the
+Step 1 output, one option per distinct category, never a subset. Do not work from
+a list written here; categories and their contents change, and this file has no
+way of knowing.
 
-| Option | Covers |
-|---|---|
-| `minimal` | `minimal/basic`, `minimal/compact` |
-| `git` | `git/branch`, `git/full` |
-| `usage` | `usage/tokens`, `usage/cost` |
-| `fancy` | `fancy/powerline`, `fancy/multiline` |
+Put **every** variant of that category in the option's `preview` field, labelled
+by variant name, so the user sees the whole category before committing to it. A
+category can hold more than two.
 
-Put **both** of that category's rendered outputs in the option's `preview` field,
-labelled by variant, so the user sees everything the category offers before
-committing to it.
-
-**Step 2b — the two variants** of the chosen category, with each style's rendered
-`output` as its `preview`.
+**Step 2b — the variants** of the chosen category, one option each, with each
+style's rendered `output` as its `preview`. If a category ever holds more than
+four, group the weakest fits under one option and expand on request rather than
+dropping any.
 
 Skip 2a only when the user's request already narrows things to one category; go
 straight to 2b in that case.
