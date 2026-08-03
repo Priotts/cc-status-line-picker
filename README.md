@@ -1,190 +1,199 @@
 # cc-status-line-picker
 
-Claude Code supports exactly one `statusLine` entry in `settings.json`. This plugin
-doesn't change that — it ships ten ready-made status lines and a picker that activates
-any one of them, keeping a timestamped backup of your settings and a one-command undo.
-
-Rendered gallery, if you'd rather look than read:
-<https://priotts.github.io/cc-status-line-picker-site/>
+Claude Code renders exactly one `statusLine`, and you configure it by hand-editing
+`settings.json` with a command string that has to survive your shell, your OS and your Node
+installation. This plugin ships ten status lines and a picker that swaps between them. It
+validates `settings.json` before touching it and backs up every version it replaces.
 
 ## Install
-
-Node 18 or newer, available as `node` on your PATH. That's the whole list — no `jq`, no
-runtime dependencies, no build step, since `dist/` is committed. git is optional: styles
-that show branch state omit the section when git is missing or the directory isn't a
-repository. macOS, Linux and Windows are all tested in CI.
 
 ```
 /plugin marketplace add Priotts/cc-status-line-picker
 /plugin install cc-status-line-picker@cc-status-line-picker
 ```
 
-Then, inside Claude Code:
+Node 18 or newer on your PATH. Nothing else: no `jq`, no runtime dependencies, no build
+step, because `dist/` ships built. git is optional. Without it the branch section is
+omitted and nothing else changes.
 
-```
-/statusline-pick
-```
+Restart Claude Code, then run `/statusline-pick`. Plain language reaches the same skill:
+*"give me a status line with git and my session cost"*, *"put my old one back"*, *"get rid
+of the status bar"*.
 
-Two questions — category, then variant — and it writes the change. `/statusline-preview`
-renders the gallery and touches nothing. Both are skills rather than fixed commands, so
-plain language reaches them too: *"give me a status line with git and my session cost"*,
-*"put my old status line back"*, *"get rid of the status line"*.
+`/statusline-preview` renders everything and writes nothing.
 
-Restart Claude Code after activating. The `statusLine` command is read when a session
-starts, so an already-running one keeps the old bar.
+Restart again after activating. Claude Code reads the command once, when the session
+starts, so a freshly installed style will not appear in the session you installed it from.
 
 ## The gallery
 
-Real output, produced by running the styles against the sample session in
-`examples/session.json` — not mockups. Color is stripped here; live output is colored,
-and numbers turn yellow at 70% and red at 90%.
+Real output, from running each style against `examples/session.json` in this repository.
+That is why the directory and branch are the ones you see. Colour is stripped below. Live,
+percentages turn amber at 70 and red at 90.
 
 ### minimal
 
-```
-minimal/basic     ◆ Opus · my-project · 38% ctx · 5h 24% · 7d 41%
-minimal/compact   my-project 38%
-```
+<img src="docs/previews/minimal-basic.svg" alt="minimal/basic ◆ Opus · cc-status-line-picker · 38% ctx · 5h 24% · 7d 41%" width="760">
+<img src="docs/previews/minimal-compact.svg" alt="minimal/compact cc-status-line-picker 38%" width="760">
 
-`basic` is model, directory, context percentage and both rate-limit windows. `compact`
-is two fields and no escape codes at all — colorless by design, so it never competes
-with the conversation for attention. Neither one shells out to git.
+`compact` imports no ANSI helper at all, so it emits zero escape codes whatever your
+terminal or `NO_COLOR` say. Neither style calls git. They are the two cheapest to run.
 
 ### git
 
-```
-git/branch   ▸ my-project ⎇ main*
-git/full     ▸ my-project ⎇ main ↑2↓1 ●3 ○1 ?2 ⧉ feature-xyz ⑂ #1234 pending
-```
+<img src="docs/previews/git-branch.svg" alt="git/branch ▸ cc-status-line-picker ⎇ main*" width="760">
+<img src="docs/previews/git-full.svg" alt="git/full ▸ cc-status-line-picker ⎇ main ○1 ⑂ #1234 pending" width="760">
 
-`branch` adds a single `*` when anything is uncommitted, and nothing at all when the
-tree is clean. `full` breaks it out: `↑↓` divergence from upstream, `●` staged, `○`
-modified, `?` untracked, the worktree name when you're inside one, and the open PR for
-the branch with its review state (green when approved, red on changes requested). With
-no changes it prints the word `clean` rather than leaving a gap. The PR number and
-review state arrive in Claude Code's stdin payload; the `gh` CLI is not involved.
+`branch` gives you one thing: where you are, plus a yellow `*` when the tree is dirty. That
+asterisk is the entirety of what it reports about your working tree.
+
+`full` counts instead. `↑↓` for divergence from upstream, `●` staged, `○` modified, `?`
+untracked, and the literal word `clean` when there is nothing to report. Then the worktree
+name, then the pull request with its review state coloured by outcome. PR data arrives in
+Claude Code's payload; the style never shells out to `gh` and never touches the network.
 
 ### usage
 
-```
-usage/tokens   ▤ ████░░░░░░ 38% · 76k/200k · in 75k out 1.2k
-usage/cost     $0.42 · ◴ 12m · +156 -23 · 5h 24% (4h11m · 01:16) · 7d 41% (2d5h · Wed 03:04)
-```
+<img src="docs/previews/usage-tokens.svg" alt="usage/tokens ▤ ████░░░░░░ 38% · 76k/200k · in 75k out 1.2k" width="760">
+<img src="docs/previews/usage-cost.svg" alt="usage/cost $0.42 · ◴ 12m · +156 -23 · 5h 24% (4h11m · 17:05) · 7d 41% (2d5h · Wed 18:53)" width="760">
+<img src="docs/previews/usage-pace.svg" alt="usage/pace ◆ Opus high · ▸ cc-status-line-picker · ⎇ main* · ctx 38% · 5h 24% (17:05) · 7d 41%→61% (Wed 18:53)" width="760">
 
-`tokens` reads the real context window size, so a 1M-context model shows `/1M` instead
-of pretending everything is 200k. It flags `>200k` separately when the payload sets
-`exceeds_200k_tokens`, because that threshold is fixed regardless of the model's actual
-capacity and some behaviour keys off it.
+`tokens` reads the real window size from the payload, so a 1M-context model shows `/1M`
+instead of pretending everything is 200k. It also flags `>200k` when Claude Code sets
+`exceeds_200k_tokens`, a fixed threshold unrelated to your actual window.
 
-`cost` gives each rate limit both a countdown and a wall-clock time. The countdown
-answers "how long do I have", the clock answers "when can I start again"; neither
-replaces the other. Set `showResetTime: false` to drop the clock.
+`cost` gives each rate-limit window both a countdown and a wall-clock time. The countdown
+answers how long you have, the clock answers when you can start again. Set
+`showResetTime: false` to drop the clock half.
 
-```
-usage/pace   ▸ my-project · ⎇ main* · ctx 38% · 5h 24% · 7d 41%→60%
-             ▸ my-project · ⎇ main* · ctx 84% · 5h 71%→266% · 7d 44%→154%
-```
-
-`pace` is `fancy/dashboard`'s projection without the bars, on one line. `71%→266%` reads
-as "you're at 71, heading for 266"; the arrow and the number turn red together, and only
-when a window would be exhausted before it resets, so red means one thing. When there
-isn't enough elapsed window to project, the arrow is simply absent and the segment gets
-shorter — which is why the first line above has none on `5h`.
+`pace` is the projection without any bars. Read `41%→61%` as "at 41, heading for 61". It is
+the only style that surfaces `effort.level`, the `high` after `Opus`, and the only one
+where model, effort and fast mode share a single segment. They read as one question, "what
+am I talking to", so they get one answer. Everything except the numbers is grey.
 
 ### fancy
 
+<img src="docs/previews/fancy-multiline.svg" alt="fancy/multiline ◆ Opus ▸ cc-status-line-picker ⎇ main ○1 ⑂ #1234" width="760">
+
+Identity and repository state on top, consumption underneath. Each line truncates
+independently, so a narrow terminal loses the tail of a row rather than wrapping it.
+
+<img src="docs/previews/fancy-dashboard.svg" alt="fancy/dashboard ◆ Opus ▸ cc-status-line-picker ⎇ main ○1 ⑂ #1234" width="760">
+
+Context and both rate-limit windows on one scale, stacked. That is the whole point: you can
+see which of the three runs out first, and no inline row gives you that comparison however
+much detail it carries.
+
+Bars are 14 wide here rather than 10, because the layout has the room, but an explicit
+`barWidth` in your config wins. Setting `barWidth: 10` is indistinguishable from leaving it
+alone, so the dashboard keeps 14 in that case. It is the only style using partial blocks
+(`▏▎▍▌▋▊▉`), which buy eight times the resolution in the same width. The percentage is
+padded to four characters because `100%` is four wide, and that padding is the only reason
+the rows stay aligned at every value. No table library is involved.
+
+With `showLimits: false` the last two rows disappear and the dashboard prints two lines.
+
+<img src="docs/previews/fancy-powerline.svg" alt="fancy/powerline ◆ Opus ▶ cc-status-line-picker ▶ ⎇ main* ▶ $0.42 ◴ 12m ▶" width="760">
+
+Read that image with some suspicion. The separators there are drawn as shapes, so they
+look right to everyone. In a terminal they are U+E0B0 and U+E0B1, two Private Use Area
+characters that only a [Nerd Font](https://www.nerdfonts.com/) supplies. Without one you
+get empty boxes where the triangles and chevrons should be. It is the only style flagged
+`requiresNerdFont`, and the picker warns you before activating it.
+
+Two rows, because one row carrying all of this ran past 100 columns, and a powerline row
+cut mid-segment leaves a ragged block of colour that reads as broken rather than clipped.
+Row one is which session this is and what it has cost. Row two is the gauges.
+
+Three numbers inside one segment would blur together, so the text carries its own
+hierarchy: dim label, bright value, tinted projection, dim clock. That costs no width. The
+branch turns violet on anything outside `defaultBranches`, which is the fastest way to
+notice you are not on trunk.
+
+This style paints raw escape sequences and ignores `config.colors` entirely. The semantic
+colours are chosen to work as foregrounds and look bad as segment backgrounds. It handles
+`NO_COLOR` itself: with colour off the ribbon means nothing and the separators would be
+tofu in an unpatched font, so the segments degrade to plain text joined by your configured
+separator.
+
+## The projection
+
+Three styles show where a rate-limit window is heading, not only where it is.
+
 ```
-fancy/powerline    ◆ Opus  my-project  ⎇ main*  38% 
+88% with fifteen minutes left    →   93%    alarming number, you are fine
+71% with three and a half hours  →  266%    calm number, real problem
 ```
 
-Filled background segments joined by U+E0B0. Without a [Nerd Font](https://www.nerdfonts.com/)
-those separators are missing-glyph boxes, which is why this is the only style flagged
-`requiresNerdFont` and why the picker says so before you choose it. Every other style
-sticks to plain Unicode. It also ignores `config.colors` on purpose and uses its own
-256-color palette: the semantic colors are picked to work as foregrounds and read badly
-as segment backgrounds.
+The arithmetic is `used / elapsed`, where the elapsed fraction comes from `resets_at` and
+the nominal window length. No history is kept between runs. Red is reserved for a
+projection above 100, so on a quiet session the whole line stays green and grey and red
+means one thing.
 
-```
-fancy/multiline   ◆ Opus ▸ my-project ⎇ main ●3 ○1 ⑂ #1234
-                  ▤ ████░░░░░░ 38% · $0.42 · 5h 24% (4h11m · 01:16) · 7d 41% (2d5h · Wed 03:04)
-```
+For the first fifth of a window there is no projection at all. Dividing by a small elapsed
+fraction turns a two-minute burst into a terrifying number, so the arrow is absent and the
+segment shortens on its own.
 
-Identity and repository state above, consumption below. Each line truncates
-independently, so a narrow terminal loses detail rather than wrapping.
-
-```
-fancy/dashboard   ◆ Opus ▸ my-project ⎇ main ●3 ○1 ?2
-                  ctx ███████████▊░░ 84%   169k/200k  $2.71 ◴ 1h48m +892 -310
-                   5h █████████▉░░░░ 71%   resets 00:44 (3h38m)  ▲ on pace for 263%
-                   7d ██████▏░░░░░░░ 44%   resets Fri 20:05 (4d22h)  ▲ on pace for 151%
-```
-
-Four lines, three gauges on one scale, so you can see which window runs out first. It's
-the only style using partial blocks (`▏▎▍▌▋▊▉`), which give eight times the resolution
-in the same width, and the only one whose columns are a hand-built grid: three-character
-label, bar, then the percentage padded to four, because `100%` is four characters wide
-and that is what keeps the rows aligned at every value.
-
-The projection answers what a raw percentage cannot — am I going too fast? It compares
-how much of a window you've consumed against how much of it has elapsed. `88%` with
-fifteen minutes left reads `▸ on pace for 93%`: an alarming number and a fine situation.
-`71%` with three and a half hours still to run reads `▲ on pace for 263%`. Red tracks
-trajectory, not level, which is how a 7d window at 44% ends up in red above. Nothing is
-projected until a fifth of a window has elapsed; before that, dividing by a small
-fraction turns a short burst into a frightening and meaningless number. See the design
-notes below for the assumption this rests on.
+**This assumes the windows are fixed**, not sliding: one starts, runs its nominal length,
+resets. Nothing in the payload says when a window began, so elapsed time is reconstructed
+from `resets_at` alone. If these windows actually slide, that reconstruction measures
+nothing and the feature should be deleted rather than tuned. Watch `resets_at` for a few
+hours and you can settle it yourself. A fixed window holds steady and then jumps; a sliding
+one creeps continuously.
 
 ## Commands
 
-The two skills run these for you. They're plain Node scripts, so you can also run them
-by hand from a clone of this repository or from the plugin's installed directory:
+The skills call these. They are plain Node scripts and you can call them yourself.
 
-| Command | Effect |
+| Script | What it does |
 |---|---|
-| `node scripts/preview.mjs` | Render the whole gallery. Style ids as arguments render only those. |
-| `node scripts/preview.mjs --json` | Same, as `{id, category, name, description, requiresNerdFont, output, error}`. |
-| `node scripts/install-style.mjs <style-id>` | Activate a style. |
-| `node scripts/install-style.mjs --list` | Tab-separated id, name, description. |
-| `node scripts/install-style.mjs --status` | Active style, install paths, plugin version. |
-| `node scripts/install-style.mjs --restore` | Put the newest backup of `settings.json` back. |
-| `node scripts/install-style.mjs --remove` | Delete the `statusLine` key and leave the rest alone. |
+| `preview.mjs` | Render the gallery. Style ids as arguments render only those. |
+| `preview.mjs --json` | Same output, structured, one object per style. |
+| `install-style.mjs <id>` | Activate a style. |
+| `install-style.mjs --list` | Tab-separated id, name, description. |
+| `install-style.mjs --status` | Active style, paths, plugin version it was built from. |
+| `install-style.mjs --restore` | Newest backup for the scope. |
+| `install-style.mjs --remove` | Delete the `statusLine` key, leave the rest untouched. |
 
-Everything except `preview.mjs` takes `--scope user|project`. The default is `user`
-(`~/.claude/settings.json`); `project` targets `.claude/settings.json` in the current
-directory. Neither script has a `--help`; the usage line you get from a bad invocation
-is all there is.
+Everything except `preview.mjs` accepts `--scope user|project`. The default is user
+(`~/.claude/settings.json`); project writes to `<cwd>/.claude/settings.json`. There is no
+`--help`; a bad invocation prints the usage line and exits 1.
 
 ### What the installer guarantees
 
-`settings.json` is parsed and checked before anything is written anywhere, including
-into the install directory — re-serialising a file it misread would destroy your
-configuration, so a file that isn't valid JSON aborts the run with a message and a
-non-zero exit. The write itself goes to a temp file in the same directory and is then
-renamed over the target, so an interrupted run can't truncate the file. The previous
-contents are copied to `~/.claude/statusline-picker/backups/settings-<scope>-<timestamp>.json`
-first, and the newest 20 per scope are kept.
+`settings.json` is read and validated before anything is written anywhere, including before
+the install directory is created. A file that is not parseable JSON, or that parses to an
+array or a primitive, aborts the run with an error telling you to fix or move it.
+Re-serialising a file you misread is how you destroy someone's configuration, so the script
+refuses rather than guesses.
 
-One asymmetry worth knowing: `--restore` does not back up the file it overwrites.
-Activating a style and `--remove` both do, so `--remove` followed by `--restore` round
-trips cleanly, but restoring twice restores the same backup twice.
+Writes go to `<file>.tmp-<pid>` and are renamed over the target, so an interrupted run
+cannot truncate `settings.json`. The previous contents are copied to
+`~/.claude/statusline-picker/backups/` first, twenty kept per scope, oldest pruned. Pruning
+is wrapped in its own try/catch: housekeeping must never abort an install.
 
-The command written into `settings.json` is the bare word `node` when `node` is on your
-PATH, so the status line follows nvm/fnm/volta switches. When it isn't, the absolute
-path of the current interpreter is baked in and the installer warns you to re-run the
-picker if you move or upgrade Node. Paths are always written with forward slashes,
-including on Windows, because Git Bash eats unquoted backslashes.
+One asymmetry worth knowing. `--restore` does not back up what it overwrites. Remove then
+restore round-trips cleanly, but running restore twice restores the same backup twice and
+whatever was there in between is gone.
+
+The command written into settings uses the bare word `node` when `node` answers on your
+PATH, so the status line follows nvm, fnm and volta as you switch versions. When it does
+not answer, the absolute interpreter path is quoted and baked in, and the installer tells
+you to re-run the picker if you ever move Node. Paths always use forward slashes, Windows
+included, because Git Bash eats unquoted backslashes:
+
+```json
+"statusLine": {
+  "type": "command",
+  "command": "node \"C:/Users/you/.claude/statusline-picker/active.mjs\""
+}
+```
 
 ## Configuration
 
-```
-~/.claude/statusline-picker/config.json
-```
-
-Seeded from `config.default.json` on first activation and never overwritten afterwards,
-so your edits survive both switching styles and updating the plugin. Every key is
-optional; each section is merged key by key, so overriding one icon doesn't drop the
-rest. Anything missing, misspelled or of the wrong type falls back to the default
-without comment — a bad config never breaks the bar.
+`~/.claude/statusline-picker/config.json`, seeded from the shipped template on first
+activation and never overwritten afterwards. Your edits survive switching styles, updating
+the plugin, and removing the plugin.
 
 ```jsonc
 {
@@ -202,139 +211,126 @@ without comment — a bad config never breaks the bar.
   "showCost": true,
   "showLimits": true,
   "showResetTime": true,
+  "defaultBranches": ["main", "master"],
   "thresholds": { "warn": 70, "danger": 90 }
 }
 ```
 
-Colors accept a name (`"cyan"`), a 256-color index (`"123"`), or a raw SGR sequence
-(`"38;5;123"`). `barWidth` is clamped to 40. Changes apply on the next refresh; no
-reinstall. Setting [`NO_COLOR`](https://no-color.org) strips every escape sequence from
-every style.
+Every key is optional. Sections merge key by key, so overriding one icon does not drop the
+others, and a value of the wrong type is dropped rather than honoured. Anything missing or
+invalid falls back to the default in silence, because a status line must never fail because
+of its config. Changes apply on the next refresh; no reinstall.
 
-Three things about this file that surprise people:
+Colours accept a name, a 256-colour index as a string (`"123"`), or a raw SGR sequence
+(`"38;5;123"`). The default grey is ANSI 90, which genuinely disappears against a pure
+black terminal. `"muted": "245"` is the practical fix. [`NO_COLOR`](https://no-color.org)
+turns every colour helper into the identity function and the output stays readable as plain
+text.
 
-- Reset times use the system locale, so `Wed 03:04` above may read `mer 03:04` or
-  `1:16 AM` on your machine. The weekday only appears past 24 hours, because a bare
-  `18:30` two days out is ambiguous.
-- `fancy/dashboard` widens its bars to 14 cells unless `barWidth` differs from the
-  default of 10. Writing `"barWidth": 10` explicitly is indistinguishable from writing
-  nothing, so it still gets 14.
-- `config.json` is resolved next to the running script, never from the working
-  directory. That's what makes the installed copy work from any cwd — and it also means
-  `preview.mjs` and the tests, which run the bundles out of the repo, always render with
-  the built-in defaults rather than your settings.
+`defaultBranches` is a list because the convention is not universal; trunk, develop and
+integration all exist. Only `fancy/powerline` reads it.
 
-## Design notes
+`icons.cost` is in the template but no shipped style reads it, since `money()` hardcodes the
+`$`. Changing it does nothing.
 
-### The active style is a copy, not a reference
+Reset times use the system locale, so `Wed 18:53` may render as `mer 18:53` on your machine,
+and the 12h/24h choice is not ours to make. `config.json` is looked up next to the running
+script rather than in the working directory, which is what lets the installed copy work from
+any cwd. The cost of that is `preview.mjs` and the test suites always rendering with the
+built-in defaults, never with yours.
 
-Activating writes the chosen bundle to `~/.claude/statusline-picker/active.mjs` and
-points `statusLine.command` at that file. It never points into the plugin directory, for
-two independent reasons: `${CLAUDE_PLUGIN_ROOT}` is not expanded inside `settings.json`
-(it only resolves within plugin components — skills, hooks, MCP, LSP), and a plugin's
-installation path changes on every update, with the old directory eventually deleted. A
-path into the plugin would fail immediately on the first count and silently on the
-second.
+## Why the active style is a copy
 
-That constraint is why esbuild emits fully self-contained bundles: the copy has no
-`node_modules`, no sibling `src/lib/`, no repository around it. Node builtins are the
-only imports that survive. They're built unminified, so you can read what runs in your
-shell on every message.
+Activating copies one self-contained bundle to `~/.claude/statusline-picker/active.mjs`, and
+`statusLine.command` points at that copy. Never at the plugin directory. Two independent
+reasons, either one fatal on its own: `${CLAUDE_PLUGIN_ROOT}` is not expanded inside
+`settings.json` (it only resolves within plugin components), and a plugin's install path
+changes on every update with the old directory eventually deleted. The variable form breaks
+immediately. The hardcoded path breaks quietly, weeks later.
 
-The trade-off is real: after a plugin update your active copy stays on the old version,
-and fixes or new styles don't reach it. `--status` compares the `pluginVersion` recorded
-in `active.json` against the installed plugin and tells you when they differ. Re-running
-the picker on the same style id refreshes the copy.
+That is also why the build emits fully self-contained bundles. The copy has no
+`node_modules`, no sibling `lib/`, no repo around it, only Node builtins. They are
+unminified so you can read what runs in your shell on every message.
 
-### Git state is fetched once and cached for two seconds
+The copy is a snapshot, and that has two consequences. After a plugin update your
+`active.mjs` is still the old build; `--status` compares the stamped version against the
+installed one and tells you to re-run the picker on the same id to refresh it. And
+uninstalling the plugin does not remove your status line, because nothing in
+`~/.claude/statusline-picker/` or in `settings.json` belongs to the plugin directory. Run
+`--remove` or `--restore` before uninstalling. There is no uninstall hook.
 
-The status line re-runs on every assistant message, and Claude Code's own docs warn that
-`git status` is slow enough to cause visible lag. Two mitigations. First, one invocation
-does everything: `git status --porcelain=v1 --branch --untracked-files=normal` yields the
-branch, ahead/behind and all three file counts together. Only a detached HEAD costs a
-second call. Second, the parsed result is cached in a temp file keyed by a hash of the
-working directory, with a 2s TTL and a 1.5s timeout on the git call itself.
+## Notes on the internals
 
-Failures are cached too. "Not a repository", "git isn't installed" and "git timed out"
-are indistinguishable from here and handled identically — the section is omitted — so
-caching the `null` is what stops a non-repo directory from re-shelling out forever.
+Git state comes from a single call, which yields the branch, ahead/behind, and
+staged/modified/untracked counts together:
 
-### The projection assumes a fixed window
+```
+git -C <cwd> status --porcelain=v1 --branch --untracked-files=normal
+```
 
-Nothing in the stdin payload says when a rate-limit window *started*. `fancy/dashboard`
-reconstructs the elapsed fraction as `(nominalLength − timeUntilReset) / nominalLength`,
-which is only meaningful if these windows are **fixed** buckets: one starts, runs for its
-nominal length, resets. If they slide instead, the elapsed fraction measures nothing and
-every projection is wrong — in which case the feature should be deleted, not tuned. It's
-falsifiable by watching `resets_at`: a fixed window holds steady for hours and then
-jumps, a sliding one creeps continuously. Guards in `projectedUsage`
-(`src/lib/segments.ts`, shared by `fancy/dashboard` and `usage/pace`) suppress the
-projection when a reset is further out than the window is long, which is one way the
-assumption would show itself.
+A detached HEAD costs one extra `rev-parse`. Results are cached in a temp file keyed by a
+hash of the cwd, 2 second TTL, 1.5 second timeout. Failures are cached too: not a repo, git
+missing and git timed out are indistinguishable from in here and handled identically, and
+caching the failure is what stops a non-repo directory from shelling out on every refresh.
+The docs warn that `git status` is slow enough to cause visible lag, and they are right.
 
-### Rough edges
+Those cache files (`cc-slp-git-*.json`, roughly 135 bytes each) are never cleaned up. The
+TTL governs freshness, not lifetime.
 
-The git cache files (`cc-slp-git-*.json` in your temp directory, ~135 bytes each, one per
-distinct working directory) are never garbage collected. The TTL governs freshness, not
-lifetime.
+Truncation is ANSI-aware but counts UTF-16 code units rather than display columns. Every
+shipped icon is a single-width BMP character so the `COLUMNS` guarantee holds. Put an emoji
+in `config.icons` and it quietly stops being true.
 
-Truncation counts UTF-16 code units, not display columns. Every shipped icon is a
-single-width BMP character so it holds, but put an emoji or a CJK character in
-`config.icons` and the `COLUMNS` guarantee quietly stops being true.
+`src/types.ts` mirrors the documented stdin payload in full, including fields no shipped
+style consumes: `vim.mode`, `agent.name`, `output_style`, `transcript_path`,
+`context_window.current_usage` and more. Almost every field is optional on purpose, because
+many are absent or null before the first API response. Never assume a field is present.
 
-## Contributing a style
+## Adding a style
 
-1. Add `src/styles/<your-style>.ts`. Import `run` from `../lib/input.js`; it parses
-   stdin and guarantees a style that throws still prints something.
-2. Add an entry to `styles.json` — `id`, `category`, `name`, `description`, `file`,
-   `lines`, `requiresNerdFont`. That file is the single source of truth for the picker,
-   the preview, the tests and this README. New categories go in `categories` there.
-3. `npm install && npm run build && npm test`
-4. Commit `dist/`. Users install the plugin without a build step, so the built output is
-   part of the distribution. CI rebuilds and fails on any diff, which is also why
-   `.gitattributes` forces LF — a Windows checkout would otherwise convert `dist/` to
-   CRLF and report a build that isn't stale as stale.
+Write `src/styles/<name>.ts` and wrap the render function in `run` from `../lib/input.js`,
+which parses stdin, tolerates garbage, and makes sure a style that throws still prints
+something instead of vanishing. Add an entry to `styles.json`, including the `lines` count.
+That file feeds the picker, the preview, the installer and the test runner, so it is the
+only registry a new style needs. Then:
 
-Don't hand-edit `config.default.json`. The build regenerates it from `DEFAULT_CONFIG` in
-`src/lib/config.ts` so the shipped template and the code reading it can't drift.
+```
+npm install && npm run build && npm test
+```
 
-`npm test` runs each style against nine stdin payloads — the full sample, `{}`, empty
-stdin, non-JSON, a JSON array, all-nulls, a 1M window at 97.4%, expired rate-limit
-windows — and enforces the contract:
+Commit `dist/`. Users install without a build step, and CI rebuilds on Linux, Windows and
+macOS and fails on any diff between the committed output and the sources. Do not hand-edit
+`config.default.json` either; the build regenerates it from `DEFAULT_CONFIG` so the shipped
+template and the code reading it cannot drift apart.
 
-- never crash, whatever stdin contains; stderr isn't displayed, so a crash is an
+`npm test` runs all ten styles against nine stdin payloads: the full sample, `{}`, empty
+stdin, non-JSON text, a bare array, all-nulls, nested nulls, a 1M window at 97.4%, and
+expired rate-limit windows. Four rules are enforced on each:
+
+- never crash, whatever stdin contains, since stderr is not displayed and a crash is an
   invisible failure
 - always print something, so an empty status bar always means a real bug
-- respect `COLUMNS`: truncate, never wrap
+- respect `COLUMNS`, truncating rather than wrapping, checked at 120 and at 40
 - emit no ANSI sequences when `NO_COLOR` is set
-- treat every input field as possibly missing or `null`
 
-The crash fallback in `run()` is a safety net for users, not for styles: the test asserts
-the output does *not* contain `statusline error:`, so a style that relies on it fails CI.
+The crash fallback in `run()` exists for users, not for styles. The test asserts that
+`statusline error:` never appears in any output, so leaning on the fallback fails CI.
+
+A second suite installs into a sandboxed `HOME` and, among other things, executes the
+generated `statusLine.command` through the platform's own shell. That command string is
+assembled on one OS and interpreted by another's shell, which is exactly where quoting and
+path separators break, and it cannot be verified by reasoning about it.
 
 ## Layout
 
 ```
-.claude-plugin/plugin.json       plugin manifest (the authoritative version)
-.claude-plugin/marketplace.json  marketplace manifest, source "./"
-styles.json                      gallery manifest — the single source of truth
-src/                             TypeScript sources: types, shared lib, styles
-dist/styles/*.mjs                built, self-contained styles (committed)
-config.default.json              generated from src/lib/config.ts at build time
-examples/session.json            sample stdin payload used by previews and tests
-skills/                          statusline-pick, statusline-preview
-scripts/build.mjs                esbuild passes; also regenerates config.default.json
-scripts/install-style.mjs        writes settings.json: validation, backup, atomic rename
-scripts/preview.mjs              renders styles against the sample session
-scripts/test-styles.mjs          the style contract
-scripts/test-install.mjs         installs into a sandboxed HOME and runs the result
+.claude-plugin/     plugin and marketplace manifests
+styles.json         gallery manifest, single source of truth
+src/                types, shared lib, one file per style
+dist/styles/        built self-contained bundles (committed)
+skills/             statusline-pick, statusline-preview
+scripts/            build, install, preview, two test suites
+examples/           sample stdin payload
 ```
 
-`test-install.mjs` overrides both `$HOME` and `%USERPROFILE%`, then executes the
-generated `statusLine.command` through the platform's real shell. That command string is
-assembled on one OS and interpreted by another's shell, which is where quoting and path
-separators actually break, and it can't be checked by reasoning about it.
-
-## License
-
-MIT — see [LICENSE](LICENSE).
+MIT.
